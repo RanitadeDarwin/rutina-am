@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Rutina Girly 💗</title>
+
+<style>
+:root{
+--bg:#fff7fb;
+--card:#ffffff;
+--border:#ffd6ea;
+--pink:#ff78b7;
+--mint:#6fe7c8;
+--mint-soft:#e8fff8;
+--pink-soft:#ffe2f1;
+}
+
+body{
+font-family:system-ui;
+margin:0;
+background:var(--bg);
+color:#2a1f2a;
+}
+
+.wrap{max-width:700px;margin:auto;padding:20px;}
+.card{
+background:var(--card);
+border:1px solid var(--border);
+border-radius:18px;
+padding:16px;
+margin-top:15px;
+box-shadow:0 10px 25px rgba(255,120,183,.15);
+}
+
+.big{font-size:36px;font-weight:800;}
+button{
+background:var(--pink);
+color:white;
+border:0;
+border-radius:14px;
+padding:12px;
+font-weight:700;
+margin-right:6px;
+cursor:pointer;
+}
+.secondary{background:var(--mint);color:#083b2f;}
+textarea{
+width:100%;
+border-radius:14px;
+border:1px solid var(--border);
+padding:10px;
+background:linear-gradient(180deg,var(--pink-soft),var(--mint-soft));
+}
+.pill{
+background:var(--mint-soft);
+border-radius:999px;
+padding:4px 10px;
+font-size:12px;
+font-weight:700;
+}
+.progress{
+height:10px;
+background:var(--pink-soft);
+border-radius:999px;
+overflow:hidden;
+margin-top:10px;
+}
+.bar{
+height:100%;
+width:0%;
+background:linear-gradient(90deg,var(--pink),var(--mint));
+}
+</style>
+</head>
+
+<body>
+<div class="wrap">
+<h2>🕒 Rutina Girly</h2>
+
+<div class="card">
+<div id="task">—</div>
+<div class="big" id="time">00:00</div>
+
+<div style="display:flex;gap:10px;margin-top:8px;">
+<div class="pill">Total: <span id="total">00:00</span></div>
+<div class="pill">Llevas: <span id="elapsed">00:00</span></div>
+<div class="pill">Falta: <span id="remainTotal">00:00</span></div>
+</div>
+
+<div class="progress"><div class="bar" id="bar"></div></div>
+
+<div style="margin-top:12px;">
+<button id="start">Start</button>
+<button class="secondary" id="next">Next</button>
+<button class="secondary" id="reset">Reset</button>
+</div>
+</div>
+
+<div class="card">
+<textarea id="input" rows="7"></textarea>
+<button class="secondary" id="save">Guardar rutina</button>
+</div>
+
+</div>
+
+<script>
+const DEFAULT=`Lavarse los dientes | 2
+Ducha | 10
+Secarse el cuerpo | 2
+Secarse el pelo | 5
+Maquillaje | 20`;
+
+const $=id=>document.getElementById(id);
+
+const input=$("input");
+const task=$("task");
+const time=$("time");
+const total=$("total");
+const elapsed=$("elapsed");
+const remainTotal=$("remainTotal");
+const bar=$("bar");
+
+let steps=[];
+let idx=0;
+let remaining=0;
+let stepTotal=0;
+let timer=null;
+
+function cuteChime(){
+const ctx=new (window.AudioContext||window.webkitAudioContext)();
+const o=ctx.createOscillator();
+const g=ctx.createGain();
+o.type="sine";
+o.frequency.value=1200;
+g.gain.value=.08;
+o.connect(g);
+g.connect(ctx.destination);
+o.start();
+setTimeout(()=>{o.stop();ctx.close();},200);
+}
+
+function parse(){
+steps=input.value.split("\n").map(l=>{
+let [n,m]=l.split("|");
+return {name:n.trim(),secs:Math.round(parseFloat(m)*60)};
+});
+}
+
+function sum(){return steps.reduce((a,b)=>a+b.secs,0);}
+function remainTot(){
+let r=remaining;
+for(let i=idx+1;i<steps.length;i++)r+=steps[i].secs;
+return r;
+}
+
+function fmt(s){
+let m=Math.floor(s/60);
+let r=s%60;
+return String(m).padStart(2,"0")+":"+String(r).padStart(2,"0");
+}
+
+function loadStep(i){
+idx=i;
+task.textContent=steps[i].name;
+remaining=steps[i].secs;
+stepTotal=steps[i].secs;
+update();
+}
+
+function update(){
+time.textContent=fmt(remaining);
+bar.style.width=((1-remaining/stepTotal)*100)+"%";
+
+total.textContent=fmt(sum());
+remainTotal.textContent=fmt(remainTot());
+elapsed.textContent=fmt(sum()-remainTot());
+}
+
+function start(){
+if(timer)return;
+timer=setInterval(()=>{
+remaining--;
+if(remaining<=0){
+cuteChime();
+next();
+return;
+}
+update();
+},1000);
+}
+
+function next(){
+clearInterval(timer);
+timer=null;
+if(idx+1>=steps.length){task.textContent="🎉 listo";return;}
+loadStep(idx+1);
+}
+
+function reset(){
+clearInterval(timer);
+timer=null;
+loadStep(0);
+}
+
+$("start").onclick=start;
+$("next").onclick=()=>{cuteChime();next();}
+$("reset").onclick=reset;
+$("save").onclick=()=>{
+localStorage.setItem("rutina",input.value);
+parse();
+loadStep(0);
+};
+
+input.value=localStorage.getItem("rutina")||DEFAULT;
+parse();
+loadStep(0);
+</script>
+</body>
+</html>
